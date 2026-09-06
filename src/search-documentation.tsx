@@ -203,7 +203,7 @@ export default function SearchDocumentation() {
       title: "Refreshing documentation index",
     });
     try {
-      clearDetailsCache();
+      await clearDetailsCache();
       const refreshed = await refreshInventory();
       if (includeGuides) {
         await refreshGuides();
@@ -229,12 +229,14 @@ export default function SearchDocumentation() {
       title: "Downloading documentation for offline use",
     });
     try {
-      await prefetchPages(pages, (done, total) => {
+      const failed = await prefetchPages(pages, (done, total) => {
         toast.message = `${done} of ${total} pages`;
       });
       toast.style = Toast.Style.Success;
-      toast.title = `Cached ${pages.length} pages for offline use`;
-      toast.message = undefined;
+      toast.title = `Cached ${pages.length - failed} pages for offline use`;
+      toast.message = failed
+        ? `${failed} pages could not be downloaded`
+        : undefined;
     } catch (error) {
       toast.style = Toast.Style.Failure;
       toast.title = "Offline download failed";

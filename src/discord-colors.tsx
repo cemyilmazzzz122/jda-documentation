@@ -22,7 +22,7 @@ export default function DiscordColors() {
                 />
                 <Action.CopyToClipboard
                   title="Copy Embed Call"
-                  content={`.setColor(new Color(${literal}))`}
+                  content={`.setColor(${literal})`}
                 />
                 <Action.CopyToClipboard title="Copy Hex" content={colour.hex} />
                 <Action.CopyToClipboard

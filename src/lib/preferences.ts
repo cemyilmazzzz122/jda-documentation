@@ -5,5 +5,8 @@ export type JdaVariable = Preferences["jdaVariable"];
 
 export function getPreferences(): Preferences {
   const preferences = getPreferenceValues<Preferences>();
-  return { ...preferences, applicationId: preferences.applicationId.trim() };
+  return {
+    ...preferences,
+    applicationId: preferences.applicationId?.trim() ?? "",
+  };
 }

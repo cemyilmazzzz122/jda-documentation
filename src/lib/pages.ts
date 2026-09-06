@@ -1,6 +1,6 @@
 import { environment } from "@raycast/api";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { CACHE_SCHEMA, DOCS_BASE, timeoutSignal } from "./constants";
 
@@ -87,6 +87,11 @@ export async function fetchPage(
     }
     throw error;
   }
+}
+
+export async function discardPages(): Promise<void> {
+  forgetPages();
+  await rm(pagesDirectory(), { recursive: true, force: true });
 }
 
 export function forgetPages(): void {

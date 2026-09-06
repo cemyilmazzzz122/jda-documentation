@@ -346,7 +346,7 @@ export function EntryListView({
     .flatMap((section) => section.entries)
     .find((entry) => entry.name === selected);
 
-  const { data: details } = usePromise(
+  const { data: details, isLoading: isLoadingDetails } = usePromise(
     async (entry?: DocEntry) => (entry ? loadDetails(entry) : undefined),
     [selectedEntry],
   );
@@ -395,6 +395,7 @@ export function EntryListView({
               detail={
                 entry.name === selected ? (
                   <List.Item.Detail
+                    isLoading={isLoadingDetails}
                     markdown={detailMarkdown(entry, details, ctx.meta)}
                     metadata={
                       <List.Item.Detail.Metadata>

@@ -3,7 +3,7 @@ import { parse } from "node-html-parser";
 import TurndownService from "turndown";
 import { CACHE_SCHEMA, DOCS_BASE, WIKI_BASE } from "./constants";
 import { faqHtml } from "./faq";
-import { fetchPage, forgetPages } from "./pages";
+import { discardPages, fetchPage } from "./pages";
 import { DocEntry } from "./types";
 import { guideHtml } from "./wiki";
 
@@ -15,6 +15,7 @@ export interface DocDetails {
 }
 
 const MAX_BLOCK = 300000;
+const PREFETCH_CONCURRENCY = 6;
 
 const detailsCache = new Cache({
   namespace: `details-${CACHE_SCHEMA}`,
@@ -260,9 +261,11 @@ export async function loadDetails(entry: DocEntry): Promise<DocDetails> {
   return details;
 }
 
-export function clearDetailsCache(): void {
+// A refresh exists because the published docs moved, so the downloaded pages
+// are stale too and have to go with the rendered Markdown.
+export async function clearDetailsCache(): Promise<void> {
   detailsCache.clear();
-  forgetPages();
+  await discardPages();
 }
 
 export function documentationPages(entries: DocEntry[]): string[] {
@@ -275,13 +278,32 @@ export function documentationPages(entries: DocEntry[]): string[] {
   ];
 }
 
+// One unreachable page out of a thousand must not abandon the whole download,
+// and a serial loop over them takes minutes that concurrency removes.
 export async function prefetchPages(
   pages: string[],
   onProgress: (done: number, total: number) => void,
-): Promise<void> {
+): Promise<number> {
+  let next = 0;
   let done = 0;
-  for (const page of pages) {
-    await fetchPage(page, DOCS_BASE, true, false);
-    onProgress(++done, pages.length);
+  let failed = 0;
+
+  async function worker(): Promise<void> {
+    for (let at = next++; at < pages.length; at = next++) {
+      try {
+        await fetchPage(pages[at], DOCS_BASE, true, false);
+      } catch {
+        failed += 1;
+      }
+      onProgress(++done, pages.length);
+    }
   }
+
+  await Promise.all(
+    Array.from(
+      { length: Math.min(PREFETCH_CONCURRENCY, pages.length) },
+      worker,
+    ),
+  );
+  return failed;
 }

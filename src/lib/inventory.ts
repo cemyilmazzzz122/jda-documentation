@@ -214,18 +214,33 @@ async function download(): Promise<Inventory> {
   return inventory;
 }
 
+// Parsing the cache file costs several megabytes of transient JSON, so the
+// result is held for the lifetime of the process rather than read per command.
+let memoryInventory: Inventory | null = null;
+
 export async function loadInventory(): Promise<Inventory> {
+  if (memoryInventory && Date.now() - memoryInventory.fetchedAt < CACHE_TTL)
+    return memoryInventory;
+
   const cached = await readCache();
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) return cached;
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) {
+    memoryInventory = cached;
+    return cached;
+  }
 
   try {
-    return await download();
+    memoryInventory = await download();
+    return memoryInventory;
   } catch (error) {
-    if (cached) return cached;
+    if (cached) {
+      memoryInventory = cached;
+      return cached;
+    }
     throw error;
   }
 }
 
 export async function refreshInventory(): Promise<Inventory> {
-  return download();
+  memoryInventory = await download();
+  return memoryInventory;
 }

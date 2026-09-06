@@ -34,18 +34,43 @@ function call(method: string, values: string[]): string | null {
   return `        .${method}(${args.join(", ")})`;
 }
 
+// Only the name and the trailing inline flag are delimited; splitting the whole
+// line would swallow every pipe a Discord table or markdown value contains.
+function parseField(
+  line: string,
+): { name: string; value: string; inline: boolean } | null {
+  const separator = line.indexOf("|");
+  if (separator === -1) return null;
+
+  const name = line.slice(0, separator).trim();
+  let value = line.slice(separator + 1).trim();
+  let inline = true;
+
+  const trailing = value.lastIndexOf("|");
+  if (trailing !== -1) {
+    const flag = value
+      .slice(trailing + 1)
+      .trim()
+      .toLowerCase();
+    if (flag === "true" || flag === "false") {
+      inline = flag === "true";
+      value = value.slice(0, trailing).trim();
+    }
+  }
+
+  return name && value ? { name, value, inline } : null;
+}
+
 function parseFields(
   raw: string,
 ): { name: string; value: string; inline: boolean }[] {
   return raw
     .split("\n")
-    .map((line) => line.split("|").map((part) => part.trim()))
-    .filter((parts) => parts.length >= 2 && parts[0] && parts[1])
-    .map((parts) => ({
-      name: parts[0],
-      value: parts[1],
-      inline: (parts[2] ?? "").toLowerCase() !== "false",
-    }));
+    .map(parseField)
+    .filter(
+      (field): field is { name: string; value: string; inline: boolean } =>
+        field !== null,
+    );
 }
 
 export function buildEmbedCode(input: EmbedInput): string {
@@ -57,7 +82,7 @@ export function buildEmbedCode(input: EmbedInput): string {
   const description = call("setDescription", [input.description]);
   if (description) lines.push(description);
 
-  if (input.colour) lines.push(`        .setColor(new Color(${input.colour}))`);
+  if (input.colour) lines.push(`        .setColor(${input.colour})`);
 
   const author = call("setAuthor", [
     input.authorName,

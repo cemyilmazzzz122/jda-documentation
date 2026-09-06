@@ -29,17 +29,31 @@ export function sourceUrl(entry: DocEntry): string | null {
   return `https://github.com/${SOURCE_REPOSITORY}/blob/master/src/main/java/${file}`;
 }
 
-function listenerMethod(entry: DocEntry): string {
+// ListenerAdapter names its handler after the event minus the Event suffix,
+// except for the three roots that would otherwise collide with a shorter name.
+const LISTENER_METHODS = new Map<string, string>([
+  ["GenericEvent", "onGenericEvent"],
+  ["UpdateEvent", "onGenericUpdate"],
+  ["RawGatewayEvent", "onRawGateway"],
+]);
+
+function listenerMethod(entry: DocEntry): string | null {
+  const named = LISTENER_METHODS.get(entry.display);
+  if (named) return named;
+
   const simple = entry.display.replace(/Event$/, "");
-  return `on${simple}`;
+  return simple ? `on${simple}` : null;
 }
 
-function eventBoilerplate(entry: DocEntry): string {
+function eventBoilerplate(entry: DocEntry): string | null {
+  const method = listenerMethod(entry);
+  if (!method) return null;
+
   return [
     "public class MyListener extends ListenerAdapter",
     "{",
     "    @Override",
-    `    public void ${listenerMethod(entry)}(${entry.display} event)`,
+    `    public void ${method}(${entry.display} event)`,
     "    {",
     "        ",
     "    }",
@@ -77,7 +91,7 @@ function templates(): Map<string, string> {
         "MessageEmbed embed = new EmbedBuilder()",
         '        .setTitle("Title")',
         '        .setDescription("Description")',
-        "        .setColor(new Color(0x5865F2))",
+        "        .setColor(0x5865F2)",
         "        .build();",
       ].join("\n"),
     ],

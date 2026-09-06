@@ -5,6 +5,8 @@ import { ensureMeta } from "../lib/metadata";
 import { membersOf, searchEntries } from "../lib/search";
 import { loadGuides } from "../lib/wiki";
 
+const MEMBER_LIMIT = 80;
+
 type Input = {
   /** The qualified name, for example "net.dv8tion.jda.api.entities.Guild" or "net.dv8tion.jda.api.entities.Guild#getMembers()". */
   name: string;
@@ -54,7 +56,9 @@ export default async function readEntry(input: Input) {
     example: details.example,
     references: details.references,
     members: input.includeMembers
-      ? membersOf(inventory.entries, entry).map((member) => member.name)
+      ? membersOf(inventory.entries, entry)
+          .slice(0, MEMBER_LIMIT)
+          .map((member) => member.display)
       : undefined,
     url: entry.url,
   };

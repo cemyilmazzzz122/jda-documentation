@@ -91,7 +91,18 @@ interface Indexed {
   memberSegments: string;
 }
 
+const indexed = new WeakMap<DocEntry, Indexed>();
+
 function index(entry: DocEntry): Indexed {
+  const cached = indexed.get(entry);
+  if (cached) return cached;
+
+  const built = buildIndex(entry);
+  indexed.set(entry, built);
+  return built;
+}
+
+function buildIndex(entry: DocEntry): Indexed {
   if (entry.kind === "guide") {
     const display = entry.display.toLowerCase();
     return {

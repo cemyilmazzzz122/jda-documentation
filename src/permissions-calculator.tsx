@@ -5,6 +5,7 @@ import {
   Icon,
   Keyboard,
   List,
+  openExtensionPreferences,
   showToast,
   Toast,
 } from "@raycast/api";
@@ -101,10 +102,18 @@ export default function PermissionsCalculator() {
         content={inviteUrl(value, applicationId)}
         icon={Icon.Link}
       />
-      <Action.OpenInBrowser
-        title="Open Invite URL"
-        url={inviteUrl(value, applicationId)}
-      />
+      {applicationId ? (
+        <Action.OpenInBrowser
+          title="Open Invite URL"
+          url={inviteUrl(value, applicationId)}
+        />
+      ) : (
+        <Action
+          title="Open Extension Preferences"
+          icon={Icon.Gear}
+          onAction={openExtensionPreferences}
+        />
+      )}
       <Action title="Clear Selection" icon={Icon.Trash} onAction={clear} />
     </ActionPanel>
   );

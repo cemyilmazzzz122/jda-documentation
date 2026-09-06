@@ -100,7 +100,7 @@ A form for title, description, colour, author, footer, thumbnail, image, timesta
 ```java
 MessageEmbed embed = new EmbedBuilder()
         .setTitle("Server Rules")
-        .setColor(new Color(0x5865F2))
+        .setColor(0x5865F2)
         .addField("Ping", "Pong", true)
         .setFooter("Updated daily")
         .setTimestamp(Instant.now())
@@ -111,7 +111,7 @@ Fields are entered one per line as `name | value | inline`. Quotes and newlines 
 
 ### Discord Colours
 
-All 37 Discord palette colours with a swatch, hex and integer value, and copy actions for `new Color(0x5865F2)`, `.setColor(new Color(0x5865F2))`, the hex, or the integer.
+All 37 Discord palette colours with a swatch, hex and integer value, and copy actions for `new Color(0x5865F2)`, `.setColor(0x5865F2)`, the hex, or the integer.
 
 ### Type members
 
