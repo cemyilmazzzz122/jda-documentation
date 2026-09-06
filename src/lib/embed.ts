@@ -15,7 +15,11 @@ export interface EmbedInput {
 }
 
 function quote(value: string): string {
-  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
+  return `"${value
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\r\n?/g, "\\n")
+    .replace(/\n/g, "\\n")}"`;
 }
 
 // Java arguments are positional, so a blank value between two filled ones has

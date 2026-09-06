@@ -102,13 +102,21 @@ function typeEntry(item: IndexItem): DocEntry | null {
   };
 }
 
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 function memberEntry(item: IndexItem): DocEntry | null {
   const pkg = item.p;
   const type = item.c;
   if (!pkg || !type || item.k === SUMMARY_KIND) return null;
 
   const target = item.u ?? item.l;
-  const anchor = decodeURIComponent(target);
+  const anchor = safeDecode(target);
   const page = pagePath(pkg, type);
   const owner = `${pkg}.${type}`;
 

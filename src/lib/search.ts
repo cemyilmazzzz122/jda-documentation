@@ -70,15 +70,28 @@ function startsSegment(haystack: string, token: string): boolean {
   return new RegExp(`(?:^|[\\s._#-])${escapeRegExp(token)}`).test(haystack);
 }
 
-function tokenScore(short: string, member: string, tokens: string[]): number {
+// A token is matched against both the segmented and the raw form: the segmented
+// form makes "members" find getMembersByName, the raw one makes "getmembers"
+// find getMembers, and neither spelling can be assumed to be what was typed.
+function tokenValue(indexed: Indexed, token: string): number {
+  const { short, member, shortSegments, memberSegments, full } = indexed;
+
+  if (member === token || memberSegments === token) return 400;
+  if (startsSegment(memberSegments, token)) return 320;
+  if (member.startsWith(token)) return 300;
+  if (startsSegment(shortSegments, token)) return 250;
+  if (startsSegment(short, token)) return 240;
+  if (shortSegments.includes(token) || short.includes(token)) return 120;
+  if (startsSegment(full, token)) return 80;
+  if (full.includes(token)) return 60;
+  return -1;
+}
+
+function tokenScore(indexed: Indexed, tokens: string[]): number {
   let total = 0;
   for (const token of tokens) {
-    let value: number;
-    if (member === token) value = 400;
-    else if (startsSegment(member, token)) value = 320;
-    else if (startsSegment(short, token)) value = 250;
-    else if (short.includes(token)) value = 120;
-    else return -1;
+    const value = tokenValue(indexed, token);
+    if (value < 0) return -1;
     total += value;
   }
   return 300 + total / tokens.length;
@@ -89,6 +102,8 @@ interface Indexed {
   member: string;
   shortSegments: string;
   memberSegments: string;
+  full: string;
+  qualified: string;
 }
 
 const indexed = new WeakMap<DocEntry, Indexed>();
@@ -105,11 +120,14 @@ function index(entry: DocEntry): Indexed {
 function buildIndex(entry: DocEntry): Indexed {
   if (entry.kind === "guide") {
     const display = entry.display.toLowerCase();
+    const both = `${display} ${entry.pkg.toLowerCase()}`;
     return {
-      short: `${display} ${entry.pkg.toLowerCase()}`,
+      short: both,
       member: display,
-      shortSegments: `${display} ${entry.pkg.toLowerCase()}`,
+      shortSegments: both,
       memberSegments: display,
+      full: both,
+      qualified: display,
     };
   }
 
@@ -120,16 +138,32 @@ function buildIndex(entry: DocEntry): Indexed {
     member: member.toLowerCase(),
     shortSegments: segment(withoutParameters(trimmed)),
     memberSegments: segment(member),
+    full: segment(withoutParameters(entry.name)),
+    qualified: withoutParameters(entry.name).toLowerCase(),
   };
 }
 
-function score(entry: DocEntry, joined: string, tokens: string[]): number {
-  const { short, member, shortSegments, memberSegments } = index(entry);
+// A pasted qualified name has to land on the type itself rather than on
+// whichever of its members happens to score highest on the package tokens.
+function qualifiedScore(qualified: string, dotted: string): number {
+  if (qualified === dotted) return 1200;
+  return qualified.endsWith(`.${dotted}`) ? 1100 : -1;
+}
+
+function score(
+  entry: DocEntry,
+  joined: string,
+  dotted: string,
+  tokens: string[],
+): number {
+  const indexed = index(entry);
+  const { short, member, shortSegments, memberSegments, qualified } = indexed;
 
   const base = Math.max(
+    qualifiedScore(qualified, dotted),
     termScore(short, member, joined),
     tokens.length > 1
-      ? tokenScore(shortSegments, memberSegments, tokens)
+      ? tokenScore(indexed, tokens)
       : Math.max(
           startsSegment(memberSegments, joined) ? 780 : -1,
           startsSegment(shortSegments, joined) ? 600 : -1,
@@ -167,12 +201,15 @@ export function searchEntries(entries: DocEntry[], query: string): DocEntry[] {
   const trimmed = query.trim().toLowerCase();
   if (!trimmed) return [];
 
-  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  // "Guild.getMembers" and "Guild#getMembers" are how a Java developer writes a
+  // member, so the qualifier separators split the query the way whitespace does.
+  const tokens = trimmed.split(/[\s.#]+/).filter(Boolean);
   const joined = tokens.join("");
+  const dotted = tokens.join(".");
 
   const scored: { entry: DocEntry; value: number }[] = [];
   for (const entry of entries) {
-    const value = score(entry, joined, tokens);
+    const value = score(entry, joined, dotted, tokens);
     if (value >= 0) scored.push({ entry, value });
   }
 

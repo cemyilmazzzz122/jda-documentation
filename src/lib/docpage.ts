@@ -17,6 +17,16 @@ export interface DocDetails {
 const MAX_BLOCK = 300000;
 const PREFETCH_CONCURRENCY = 6;
 
+// A stray percent sign in a generated anchor makes decodeURIComponent throw,
+// which would reject loadDetails and leave the entry unopenable.
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 const detailsCache = new Cache({
   namespace: `details-${CACHE_SCHEMA}`,
   capacity: 10 * 1024 * 1024,
@@ -194,7 +204,7 @@ function collectReferences(markdown: string): string[] {
     if (!target.endsWith(".html") || target.includes("package-")) continue;
     const type = target.slice(0, -".html".length).replace(/\//g, ".");
     if (!type.startsWith("net.dv8tion.jda.")) continue;
-    found.add(anchor ? `${type}#${decodeURIComponent(anchor)}` : type);
+    found.add(anchor ? `${type}#${safeDecode(anchor)}` : type);
   }
 
   return [...found];

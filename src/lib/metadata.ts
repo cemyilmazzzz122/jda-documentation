@@ -294,23 +294,29 @@ async function readStored(): Promise<StoredMeta | null> {
   }
 }
 
+// Held for the lifetime of the process for the same reason as the inventory:
+// every search, filter and AI tool call otherwise re-reads and re-parses it.
+let memoryMeta: StoredMeta | null = null;
+
 export async function ensureMeta(
   entries: DocEntry[],
   force = false,
 ): Promise<MetaIndex> {
-  const stored = await readStored();
-  if (!force && stored && Date.now() - stored.fetchedAt < META_TTL)
+  if (!force && memoryMeta && Date.now() - memoryMeta.fetchedAt < META_TTL)
+    return memoryMeta.meta;
+
+  const stored = memoryMeta ?? (await readStored());
+  if (!force && stored && Date.now() - stored.fetchedAt < META_TTL) {
+    memoryMeta = stored;
     return stored.meta;
+  }
   if (!entries.length) return stored?.meta ?? {};
 
   try {
     const meta = await scan(entries, force);
+    memoryMeta = { fetchedAt: Date.now(), meta };
     await mkdir(environment.supportPath, { recursive: true });
-    await writeFile(
-      metaFile(),
-      JSON.stringify({ fetchedAt: Date.now(), meta } satisfies StoredMeta),
-      "utf8",
-    );
+    await writeFile(metaFile(), JSON.stringify(memoryMeta), "utf8");
     return meta;
   } catch {
     return stored?.meta ?? {};

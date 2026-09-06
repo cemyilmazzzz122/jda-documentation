@@ -112,8 +112,13 @@ export function entryAccessories(
   if (meta?.queue)
     accessories.push({ tag: { value: "queue()", color: Color.Blue } });
   if (meta?.intents?.length) {
+    const extra = meta.intents.length - 1;
     accessories.push({
-      tag: { value: `intent: ${meta.intents.join(", ")}`, color: Color.Yellow },
+      tag: {
+        value: `intent: ${meta.intents[0]}${extra ? ` +${extra}` : ""}`,
+        color: Color.Yellow,
+      },
+      tooltip: meta.intents.join(", "),
     });
   }
   accessories.push({
