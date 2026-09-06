@@ -152,8 +152,10 @@ function sliceHeading(article: string, anchor: string): string | null {
     return intro.length >= INTRO_MINIMUM ? intro : article;
   }
 
+  // The id is not guaranteed to be the first attribute on the heading, so the
+  // slice must not depend on the order mkdocs happens to emit them in today.
   const heading = new RegExp(
-    `<h([1-6])\\s+id="${anchor.replace(/[.*+?^$()|[\]\\]/g, "\\$&")}"`,
+    `<h([1-6])\\b[^>]*\\bid="${anchor.replace(/[.*+?^$()|[\]\\]/g, "\\$&")}"`,
   );
   const match = heading.exec(article);
   if (!match) return null;
